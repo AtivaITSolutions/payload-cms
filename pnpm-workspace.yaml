@@ -3,3 +3,6 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
   - workerd
+# esbuild only has a dev/test build script and isn't whitelisted to run in CI;
+# don't let that ignored build fail the Docker install (pnpm 10+ is strict by default).
+strictDepBuilds: false
