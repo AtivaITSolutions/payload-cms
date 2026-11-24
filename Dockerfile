@@ -1,71 +1,62 @@
-# To use this Dockerfile, you have to set `output: 'standalone'` in your next.config.mjs file.
-# From https://github.com/vercel/next.js/blob/canary/examples/with-docker/Dockerfile
+# Payload CMS 3.x production image (Next.js standalone output)
+# Place this file in the ROOT of your Payload project (created with create-payload-app).
 
-FROM node:22.23.5-alpine AS base
-
-# Install dependencies only when needed
-FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+FROM node:22-alpine AS base
 RUN apk add --no-cache libc6-compat
-WORKDIR /app
 
-# Install dependencies based on the preferred package manager
+# ---------- 1. Install dependencies ----------
+FROM base AS deps
+WORKDIR /app
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
 RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+  if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
+  elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
+  else echo "No lockfile found" && exit 1; \
   fi
 
-
-# Rebuild the source code only when needed
+# ---------- 2. Build ----------
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-# ENV NEXT_TELEMETRY_DISABLED 1
+# Build-time values (only used so `next build` can load payload.config.ts)
+ARG PAYLOAD_SECRET=build-time-placeholder
+ARG DATABASE_URI=postgres://payload:payload@postgres:5432/payload
+ARG NEXT_PUBLIC_SERVER_URL=http://localhost:3000
+ENV PAYLOAD_SECRET=$PAYLOAD_SECRET \
+    DATABASE_URI=$DATABASE_URI \
+    NEXT_PUBLIC_SERVER_URL=$NEXT_PUBLIC_SERVER_URL \
+    NEXT_TELEMETRY_DISABLED=1
 
 RUN \
-  if [ -f yarn.lock ]; then yarn run build; \
-  elif [ -f package-lock.json ]; then npm run build; \
-  elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
-  else echo "Lockfile not found." && exit 1; \
+  if [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
+  elif [ -f yarn.lock ]; then yarn run build; \
+  else npm run build; \
   fi
 
-# Production image, copy all the files and run next
+# ---------- 3. Runtime ----------
 FROM base AS runner
 WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
 
-ENV NODE_ENV production
-# Uncomment the following line in case you want to disable telemetry during runtime.
-# ENV NEXT_TELEMETRY_DISABLED 1
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-# Remove this line if you do not have this folder
 COPY --from=builder /app/public ./public
-
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-USER nextjs
+# Upload folder for the Media collection (mounted as a volume in compose)
+RUN mkdir -p /app/media && chown -R nextjs:nodejs /app/media
 
+USER nextjs
 EXPOSE 3000
 
-ENV PORT 3000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/admin >/dev/null 2>&1 || exit 1
 
-# server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/next-config-js/output
-CMD HOSTNAME="0.0.0.0" node server.js
+CMD ["node", "server.js"]

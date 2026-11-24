@@ -1,0 +1,20 @@
+# Local development: only Postgres runs in Docker, Payload runs with `npm run dev`.
+# Start with:  docker compose -f docker-compose.dev.yml up -d
+# Then in .env (local):  DATABASE_URI=postgres://payload:payload@localhost:5432/payload
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: payload-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: payload
+      POSTGRES_PASSWORD: payload
+      POSTGRES_DB: payload
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_dev_data:/var/lib/postgresql/data
+
+volumes:
+  pg_dev_data:
