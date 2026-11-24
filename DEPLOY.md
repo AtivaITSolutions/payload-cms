@@ -57,7 +57,7 @@ SSH in as root (or a sudo user):
 ```bash
 docker --version && docker compose version     # confirm both work
 mkdir -p /www/docker && cd /www/docker
-git clone https://github.com/you/my-cms.git && cd my-cms
+git clone https://github.com/AtivaITSolutions/payload-cms.git && cd payload-cms
 cp .env.example .env
 openssl rand -hex 32    # paste as PAYLOAD_SECRET
 openssl rand -hex 24    # paste as POSTGRES_PASSWORD
@@ -132,7 +132,7 @@ docker compose restart payload
 docker exec payload-postgres pg_dump -U payload payload | gzip > /www/backup/payload_$(date +%F).sql.gz
 
 # Media backup
-docker run --rm -v my-cms_payload_media:/m -v /www/backup:/b alpine tar czf /b/media_$(date +%F).tgz -C /m .
+docker run --rm -v payload-cms_payload_media:/m -v /www/backup:/b alpine tar czf /b/media_$(date +%F).tgz -C /m .
 
 # Restore DB
 gunzip -c backup.sql.gz | docker exec -i payload-postgres psql -U payload payload
