@@ -1,0 +1,2 @@
+# Keeps the public/ folder in git so the Docker image's `COPY /app/public` step
+# has a directory to copy. Put static assets (favicon, robots.txt, etc.) here.
