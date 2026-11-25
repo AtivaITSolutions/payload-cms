@@ -70,6 +70,8 @@ export interface Config {
     users: User;
     media: Media;
     posts: Post;
+    pages: Page;
+    services: Service;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -80,6 +82,8 @@ export interface Config {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
+    pages: PagesSelect<false> | PagesSelect<true>;
+    services: ServicesSelect<false> | ServicesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -89,8 +93,14 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    header: Header;
+    footer: Footer;
+  };
+  globalsSelect: {
+    header: HeaderSelect<false> | HeaderSelect<true>;
+    footer: FooterSelect<false> | FooterSelect<true>;
+  };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
@@ -174,6 +184,9 @@ export interface Post {
   slug: string;
   excerpt?: string | null;
   coverImage?: (number | null) | Media;
+  /**
+   * Rich text body for posts written here.
+   */
   content?: {
     root: {
       type: string;
@@ -189,7 +202,180 @@ export interface Post {
     };
     [k: string]: unknown;
   } | null;
+  /**
+   * Raw HTML imported from WordPress, rendered as-is. Leave empty for new posts and use Content above.
+   */
+  bodyHtml?: string | null;
   publishedAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages".
+ */
+export interface Page {
+  id: number;
+  title: string;
+  /**
+   * URL path. Leave blank to auto-generate from the title.
+   */
+  slug: string;
+  /**
+   * Stack blocks to build the page.
+   */
+  layout?:
+    | (
+        | {
+            heading: string;
+            subheading?: string | null;
+            image?: (number | null) | Media;
+            buttons?:
+              | {
+                  label: string;
+                  url: string;
+                  style?: ('primary' | 'secondary') | null;
+                  id?: string | null;
+                }[]
+              | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'hero';
+          }
+        | {
+            content: {
+              root: {
+                type: string;
+                children: {
+                  type: any;
+                  version: number;
+                  [k: string]: unknown;
+                }[];
+                direction: ('ltr' | 'rtl') | null;
+                format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+                indent: number;
+                version: number;
+              };
+              [k: string]: unknown;
+            };
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'richText';
+          }
+        | {
+            /**
+             * Raw HTML (e.g. imported from WordPress), rendered as-is.
+             */
+            html: string;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'html';
+          }
+        | {
+            heading?: string | null;
+            intro?: string | null;
+            /**
+             * Leave empty to show all services automatically on the frontend.
+             */
+            services?: (number | Service)[] | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'servicesGrid';
+          }
+        | {
+            heading: string;
+            text?: string | null;
+            buttonLabel: string;
+            buttonUrl: string;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'cta';
+          }
+      )[]
+    | null;
+  /**
+   * Overrides the default <title> and meta description for this page.
+   */
+  seo?: {
+    /**
+     * Meta title (~60 chars). Falls back to the page title.
+     */
+    title?: string | null;
+    /**
+     * Meta description (~155 chars).
+     */
+    description?: string | null;
+    /**
+     * Open Graph / social share image (1200x630).
+     */
+    image?: (number | null) | Media;
+    noIndex?: boolean | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+  _status?: ('draft' | 'published') | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "services".
+ */
+export interface Service {
+  id: number;
+  title: string;
+  /**
+   * URL path. Leave blank to auto-generate from the title.
+   */
+  slug: string;
+  /**
+   * Icon name (e.g. a Lucide icon) the frontend renders.
+   */
+  icon?: string | null;
+  /**
+   * Short line for cards/grids.
+   */
+  summary?: string | null;
+  featuredImage?: (number | null) | Media;
+  /**
+   * Full service detail page body.
+   */
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Lower numbers show first.
+   */
+  order?: number | null;
+  /**
+   * Overrides the default <title> and meta description for this page.
+   */
+  seo?: {
+    /**
+     * Meta title (~60 chars). Falls back to the page title.
+     */
+    title?: string | null;
+    /**
+     * Meta description (~155 chars).
+     */
+    description?: string | null;
+    /**
+     * Open Graph / social share image (1200x630).
+     */
+    image?: (number | null) | Media;
+    noIndex?: boolean | null;
+  };
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -229,6 +415,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'posts';
         value: number | Post;
+      } | null)
+    | ({
+        relationTo: 'pages';
+        value: number | Page;
+      } | null)
+    | ({
+        relationTo: 'services';
+        value: number | Service;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -323,7 +517,105 @@ export interface PostsSelect<T extends boolean = true> {
   excerpt?: T;
   coverImage?: T;
   content?: T;
+  bodyHtml?: T;
   publishedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "pages_select".
+ */
+export interface PagesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  layout?:
+    | T
+    | {
+        hero?:
+          | T
+          | {
+              heading?: T;
+              subheading?: T;
+              image?: T;
+              buttons?:
+                | T
+                | {
+                    label?: T;
+                    url?: T;
+                    style?: T;
+                    id?: T;
+                  };
+              id?: T;
+              blockName?: T;
+            };
+        richText?:
+          | T
+          | {
+              content?: T;
+              id?: T;
+              blockName?: T;
+            };
+        html?:
+          | T
+          | {
+              html?: T;
+              id?: T;
+              blockName?: T;
+            };
+        servicesGrid?:
+          | T
+          | {
+              heading?: T;
+              intro?: T;
+              services?: T;
+              id?: T;
+              blockName?: T;
+            };
+        cta?:
+          | T
+          | {
+              heading?: T;
+              text?: T;
+              buttonLabel?: T;
+              buttonUrl?: T;
+              id?: T;
+              blockName?: T;
+            };
+      };
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+        noIndex?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "services_select".
+ */
+export interface ServicesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  icon?: T;
+  summary?: T;
+  featuredImage?: T;
+  content?: T;
+  order?: T;
+  seo?:
+    | T
+    | {
+        title?: T;
+        description?: T;
+        image?: T;
+        noIndex?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
@@ -367,6 +659,130 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "header".
+ */
+export interface Header {
+  id: number;
+  logo?: (number | null) | Media;
+  navItems?:
+    | {
+        label: string;
+        /**
+         * e.g. /about or /services
+         */
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  cta?: {
+    label?: string | null;
+    url?: string | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "footer".
+ */
+export interface Footer {
+  id: number;
+  tagline?: string | null;
+  columns?:
+    | {
+        heading: string;
+        links?:
+          | {
+              label: string;
+              url: string;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  contact?: {
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+  };
+  social?:
+    | {
+        platform: 'facebook' | 'twitter' | 'linkedin' | 'instagram' | 'youtube' | 'github';
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * e.g. © 2026 Ativa IT Solutions
+   */
+  copyright?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "header_select".
+ */
+export interface HeaderSelect<T extends boolean = true> {
+  logo?: T;
+  navItems?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+        id?: T;
+      };
+  cta?:
+    | T
+    | {
+        label?: T;
+        url?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "footer_select".
+ */
+export interface FooterSelect<T extends boolean = true> {
+  tagline?: T;
+  columns?:
+    | T
+    | {
+        heading?: T;
+        links?:
+          | T
+          | {
+              label?: T;
+              url?: T;
+              id?: T;
+            };
+        id?: T;
+      };
+  contact?:
+    | T
+    | {
+        email?: T;
+        phone?: T;
+        address?: T;
+      };
+  social?:
+    | T
+    | {
+        platform?: T;
+        url?: T;
+        id?: T;
+      };
+  copyright?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

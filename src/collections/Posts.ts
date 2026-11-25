@@ -18,7 +18,16 @@ export const Posts: CollectionConfig = {
     { name: 'slug', type: 'text', required: true, unique: true, index: true },
     { name: 'excerpt', type: 'textarea' },
     { name: 'coverImage', type: 'upload', relationTo: 'media' },
-    { name: 'content', type: 'richText' },
+    { name: 'content', type: 'richText', admin: { description: 'Rich text body for posts written here.' } },
+    {
+      name: 'bodyHtml',
+      type: 'textarea',
+      maxLength: 2_000_000, // large posts exceed Payload's 40k default
+      admin: {
+        description:
+          'Raw HTML imported from WordPress, rendered as-is. Leave empty for new posts and use Content above.',
+      },
+    },
     { name: 'publishedAt', type: 'date' },
   ],
 }

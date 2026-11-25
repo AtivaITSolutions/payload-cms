@@ -9,6 +9,10 @@ import sharp from 'sharp'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Posts } from './collections/Posts'
+import { Pages } from './collections/Pages'
+import { Services } from './collections/Services'
+import { Header } from './globals/Header'
+import { Footer } from './globals/Footer'
 // Production applies these migrations automatically on container start.
 import { migrations } from './migrations'
 
@@ -31,7 +35,8 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Posts],
+  collections: [Users, Media, Posts, Pages, Services],
+  globals: [Header, Footer],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
