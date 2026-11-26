@@ -8,8 +8,8 @@ export const Services: CollectionConfig = {
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'order', '_status'],
-    defaultSort: 'order',
   },
+  defaultSort: 'order',
   access: {
     read: ({ req }) => (req.user ? true : { _status: { equals: 'published' } }),
   },
